@@ -1,21 +1,13 @@
 from pprint import pprint 
 import sys
 
-reps = []
-with open(sys.argv[1]) as infile:
-    for i, line in enumerate(infile.readlines()):
-        reps.append([int(x) for x in line.strip().split(' ')])
-
-#pprint([x for i,x in enumerate(reps) if i < 10])
-
-safe_reports = 0
-for rep in reps:
-    prev = rep[0]
+def check_safe(report):
+    prev = report[0]
     is_asc = None
     is_highvariance = False
     is_dirswap = False
     is_stagnent = False
-    for i,v in enumerate(rep[1:]):
+    for i,v in enumerate(report[1:]):
         i+=1
         if not is_asc is None and not is_dirswap:
             if v > prev:
@@ -36,7 +28,30 @@ for rep in reps:
             is_highvariance = True
 
         prev = v
+
     if not is_dirswap and not is_highvariance and not is_stagnent:
-        safe_reports +=1
+        return True
+    return False
+
+
+reps = []
+with open(sys.argv[1]) as infile:
+    for i, line in enumerate(infile.readlines()):
+        reps.append([int(x) for x in line.strip().split(' ')])
+
+#pprint([x for i,x in enumerate(reps) if i < 10])
+
+safe_reports = 0
+for rep in reps:
+    if check_safe(rep):
+        safe_reports += 1
+    else:
+        for i in range(len(rep)):
+            mod_rep = rep[:i] + rep[i+1:]
+            if check_safe(mod_rep):
+                safe_reports += 1
+                break
+
+
 
 print(f"Safe Reports: {safe_reports}")
