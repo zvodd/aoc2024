@@ -39,10 +39,6 @@ def parse(text):
                 if result:
                     yield result
 
-            # print(f'"{prev}" ( "{ahead}"')
-            # dcount += 1
-            # if dcount > 10:
-            #     break
 
 def validate_mul_args(text):
     ab = text.split(",")
