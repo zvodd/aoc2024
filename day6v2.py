@@ -1,37 +1,31 @@
 
 
 def read_map(lines):
-    w = len(lines[0])
-    h = len(lines)
-
-    obs = []
-    pos = None
-    facing = ""
+    w, h = len(lines[0]), len(lines)
+    obs, pos, facing = [], None, ""
+    
     for y, line in enumerate(lines):
         for x, sym in enumerate(line):
             match sym:
-                case ".":
+                case "." | " ":
                     continue
                 case "#":
                     obs.append((x,y))
-                case sym if sym in ["<",">","V","^"]:
-                    pos = (x,y)
-                    facing = sym
+                case sym if sym in ["<", ">", "V", "^"]:
+                    pos, facing = (x,y), sym
                 case _:
-                    raise Exception(f'Bad symbol "{sym}" at Line {y+1}, Col :{x+1}')
+                    raise ValueError(f'Invalid symbol "{sym}" at Line {y+1}, Col {x+1}')
+    
     return (w, h, obs, pos, facing)
 
 
 def gen_final_block(pos, facing, w, h):
-    match facing:
-        case "^":
-            return (pos[0], -1)
-        case "V":
-            return (pos[0], h + 1)
-        case "<":
-            return (-1, pos[1])
-        case ">":
-            return (w + 1, pos[1])
+    return {
+        "^": (pos[0], -1),
+        "V": (pos[0], h + 1),
+        "<": (-1, pos[1]),
+        ">": (w + 1, pos[1])
+    }[facing]
 
 
 def get_blocking_obstacles(pos, facing, obs):
@@ -49,6 +43,20 @@ def get_blocking_obstacles(pos, facing, obs):
             return []
 
 
+def get_intermediate_vectors(start, end):
+    """Generate intermediate points between start and end in Manhattan distance."""
+    x1, y1 = start
+    x2, y2 = end
+    
+    if x1 == x2:
+        return [(x1, y) for y in range(min(y1, y2) + 1, max(y1, y2))]
+    elif y1 == y2:
+        return [(x, y1) for x in range(min(x1, x2) + 1, max(x1, x2))]
+    return []
+
+def next_player_direction(facing):
+    DIRS = ["^", ">", "V", "<"]
+    return DIRS[(DIRS.index(facing) + 1) % len(DIRS)]
 
 def guard_dance(lines):
     w, h, obs, pos, pdir = read_map(lines)
@@ -56,43 +64,47 @@ def guard_dance(lines):
     print(f"Step: 0")
     render(w, h, obs, [], pos, pdir)
 
-    DIRS = ["^",">","V","<"]
+
     visited = []
-    final_step = False
-    step = 1
-    while not final_step:
+    step = 0
+    finished = False
+    while not finished:
         blocks = get_blocking_obstacles(pos, pdir, obs)
-
+        
         if not blocks:
-            final_step = True
             blocks = [gen_final_block(pos, pdir, w, h)]
+            finished = True
 
+        # find closest obstacle
+        if pdir in ["^","<"]:
+            closest = blocks[-1]
+        else:
+            closest = blocks[0]
+
+        # determine next position
         match pdir:
             case "^":
-                closest = blocks[-1]
-                next_pos = (pos[0], closest[1] + 1 )
-                visited += [(next_pos[0], y) for y in range(closest[1] + 1, pos[1])]
+                next_pos = (pos[0], closest[1] + 1)
             case "V":
-                closest = blocks[0]
                 next_pos = (pos[0], closest[1] - 1)
-                visited += [(next_pos[0], y) for y in range(pos[1], closest[1])]
             case "<":
-                closest = blocks[-1]
                 next_pos = (closest[0] + 1, pos[1])
-                visited += [(x, next_pos[1]) for x in range(closest[0] + 1, pos[0])]
             case ">":
-                closest = blocks[0]
                 next_pos = (closest[0] - 1, pos[1])
-                visited += [(x, next_pos[1]) for x in range(pos[0], closest[0])]
-        
-        pdir = DIRS[(DIRS.index(pdir) + 1) % len(DIRS)]
 
+        visited += [pos]
+        visited += get_intermediate_vectors(pos, next_pos)
+        visited += [next_pos]
+
+        pdir = next_player_direction(pdir)
         pos = next_pos
+        step += 1
 
         print(f"Step: {step}")
         render(w, h, obs, visited, pos, pdir)
-        step += 1
+
     print(f"Total: {len(set(visited))}")
+    
 
 
 
